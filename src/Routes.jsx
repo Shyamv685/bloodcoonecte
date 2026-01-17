@@ -13,6 +13,8 @@ import HospitalManagementCenter from './pages/hospital-management-center'
 import LiveDonorMap from './pages/live-donor-map'
 import AdminAnalyticsCenter from './pages/admin-analytics-center'
 import Dashboard from './pages/dashboard'
+import Login from './pages/login'
+import Register from './pages/register'
 
 function AppRoutes() {
   return (
@@ -34,6 +36,8 @@ function AppRoutes() {
                 <Route path="/hospital-management-center" element={<HospitalManagementCenter />} />
                   <Route path="/live-donor-map" element={<LiveDonorMap />} />
                   <Route path="/admin-analytics-center" element={<AdminAnalyticsCenter />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>

@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Logo from '../Logo'
 
 export default function Header() {
@@ -10,16 +10,26 @@ export default function Header() {
   const location = useLocation()
   const navigate = useNavigate()
   const [showAlerts, setShowAlerts] = useState(false)
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false)
+  const dropdownRef = useRef(null)
 
   const currentPath = location.pathname
 
-  const handleProfileClick = () => {
-    if (user) {
-      // In a real app, this would navigate to profile or show dropdown
-      alert('Profile clicked!')
-    } else {
-      navigate('/donor-registration')
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowProfileDropdown(false)
+      }
     }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
+
+  const handleProfileClick = () => {
+    setShowProfileDropdown(!showProfileDropdown)
   }
 
   const handleAlertsClick = () => {
@@ -73,17 +83,62 @@ export default function Header() {
               <span className="hidden md:inline ml-2 group-hover:font-medium">Alerts</span>
             </button>
             
-            <button
-              onClick={handleProfileClick}
-              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
-                user
-                  ? 'bg-red-600 text-white hover:bg-red-700 shadow-md hover:shadow-lg'
-                  : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-red-300'
-              }`}
-            >
-              <span className="text-lg">👤</span>
-              <span className="hidden md:inline">Profile</span>
-            </button>
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={handleProfileClick}
+                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
+                  user
+                    ? 'bg-red-600 text-white hover:bg-red-700 shadow-md hover:shadow-lg'
+                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-red-300'
+                }`}
+              >
+                <span className="text-lg">👤</span>
+                <span className="hidden md:inline">Profile</span>
+              </button>
+              {showProfileDropdown && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border border-gray-200">
+                  <div className="py-1">
+                    {user ? (
+                      <>
+                        <Link
+                          to="/dashboard"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                          onClick={() => setShowProfileDropdown(false)}
+                        >
+                          Dashboard
+                        </Link>
+                        <button
+                          onClick={async () => {
+                            await signOut()
+                            setShowProfileDropdown(false)
+                          }}
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                        >
+                          Logout
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <Link
+                          to="/login"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                          onClick={() => setShowProfileDropdown(false)}
+                        >
+                          Login
+                        </Link>
+                        <Link
+                          to="/register"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                          onClick={() => setShowProfileDropdown(false)}
+                        >
+                          Register
+                        </Link>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

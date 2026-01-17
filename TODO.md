@@ -1,11 +1,13 @@
-# TODO: Make Recent Requests Dynamic in Dashboard
+# TODO: Improve UI Design for Login and Register Pages
 
-## Tasks:
-- [x] Update imports in dashboard/index.jsx to include useData and useState
-- [x] Add state and context hooks to fetch bloodRequests and updateBloodRequest
-- [x] Create recentRequests array with sorting and slicing logic
-- [x] Add getTimeElapsed helper function
-- [x] Add handleUpdate and handleDetails functions
-- [x] Replace static request display with dynamic loop over recentRequests
-- [x] Add empty state handling for no requests
-- [x] Test functionality of update and details buttons
+## Tasks
+- [x] Update src/pages/login/index.jsx with enhanced UI design
+- [x] Update src/pages/register/index.jsx with enhanced UI design
+
+## Details
+- Add BloodConnect logo at the top
+- Wrap form in a card with shadow and rounded corners
+- Use subtle gradient background
+- Add icons to input fields (email and lock)
+- Improve typography, spacing, and responsiveness
+- Enhance color scheme and accessibility

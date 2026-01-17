@@ -1,8 +1,18 @@
 import React, { useState } from 'react'
 import { useData } from '../../contexts/DataContext'
+import KPICard from '../emergency-dashboard/components/KPICard'
+import QuickActions from '../emergency-dashboard/components/QuickActions'
+import DashboardTabs from '../emergency-dashboard/components/DashboardTabs'
 
 export default function Dashboard() {
-  const { bloodRequests, updateBloodRequest } = useData()
+  const { bloodRequests, updateBloodRequest, getStats } = useData()
+  const [activeTab, setActiveTab] = useState('overview')
+  const stats = getStats()
+
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: '▦' },
+    { id: 'recent-requests', label: 'Recent Requests', icon: '📄' },
+  ]
 
   const recentRequests = bloodRequests
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
@@ -49,48 +59,87 @@ Time Elapsed: ${request.timeElapsed}
     `
     alert(details.trim())
   }
+
+  const kpis = [
+    {
+      title: 'ACTIVE DONORS',
+      value: stats.totalDonors.toLocaleString(),
+      trend: '+12.5% vs last week',
+      trendUp: true,
+      icon: '👥',
+      color: 'green',
+    },
+    {
+      title: 'ACTIVE REQUESTS',
+      value: stats.activeRequests.toString(),
+      trend: '-8.3% vs yesterday',
+      trendUp: false,
+      icon: '⚠️',
+      color: 'red',
+    },
+    {
+      title: 'SUCCESSFUL MATCHES',
+      value: stats.fulfilledRequests.toString(),
+      trend: '+18.2% this month',
+      trendUp: true,
+      icon: '✓',
+      color: 'blue',
+    },
+    {
+      title: 'LIVES SAVED',
+      value: (stats.fulfilledRequests * 3).toLocaleString(),
+      trend: '+25.7% all time',
+      trendUp: true,
+      icon: '❤️',
+      color: 'orange',
+    },
+  ]
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 md:px-8 py-6 md:py-8">
-        {/* Quick Actions */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-            <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                  <span className="text-red-600 text-2xl">➕</span>
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-900">New Blood Request</h3>
-                  <p className="text-gray-600 text-sm">Submit urgent or scheduled blood requirement</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                  <span className="text-green-600 text-2xl">🛡️</span>
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-900">Emergency Protocols</h3>
-                  <p className="text-gray-600 text-sm">Activate pre-configured emergency responses</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span className="text-blue-600 text-2xl">👥</span>
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-900">View Donors</h3>
-                  <p className="text-gray-600 text-sm">Browse and contact matched donors</p>
-                </div>
-              </div>
-            </div>
+        {/* Title and Subtitle */}
+        <div className="mb-6">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+            BloodConnect Dashboard
+          </h1>
+          <p className="text-gray-600">
+            Welcome to your blood donation management system
+          </p>
+        </div>
+
+        {/* System Status */}
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 flex items-center gap-3">
+          <span className="text-green-600 text-xl">✓</span>
+          <div className="flex-1">
+            <span className="text-green-800 font-medium">System Status: All services operational</span>
+            <span className="text-green-600 mx-2">•</span>
+            <span className="text-green-600">
+              Last updated: {new Date().toLocaleTimeString()}
+            </span>
           </div>
         </div>
+
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6">
+          {kpis.map((kpi, index) => (
+            <KPICard key={index} kpi={kpi} />
+          ))}
+        </div>
+
+        {/* Tabs */}
+        <DashboardTabs activeTab={activeTab} setActiveTab={setActiveTab} />
+
+        {/* Tab Content */}
+        {activeTab === 'overview' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+            <div className="lg:col-span-2">
+              <QuickActions />
+            </div>
+            <div>
+              {/* Additional content can be added here */}
+            </div>
+          </div>
+        )}
 
         {/* Recent Requests */}
         <div>
