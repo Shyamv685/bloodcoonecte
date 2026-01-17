@@ -1,6 +1,7 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo } from 'react'
 import { useData } from '../../contexts/DataContext'
-import { GoogleMap, LoadScript, Marker, InfoWindow } from '@react-google-maps/api'
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import 'leaflet/dist/leaflet.css'
 import MapLegend from './components/MapLegend'
 import SearchFilters from './components/SearchFilters'
 import DonorStats from './components/DonorStats'
@@ -8,32 +9,16 @@ import QuickActions from './components/QuickActions'
 import RecentActivity from './components/RecentActivity'
 import EmergencyRequest from './components/EmergencyRequest'
 
-const mapContainerStyle = {
-  width: '100%',
-  height: '100%',
-  minHeight: '500px',
-}
-
-const defaultCenter = {
-  lat: 40.7128,
-  lng: -74.0060,
-}
-
-// const libraries = ['places', 'geometry']
+const defaultCenter = [40.7128, -74.0060]
 
 export default function LiveDonorMap() {
   const { donors, bloodRequests, getStats } = useData()
   const stats = getStats()
   const [selectedBloodType, setSelectedBloodType] = useState('All Types')
   const [searchRadius, setSearchRadius] = useState('10')
-  const [map, setMap] = useState(null)
   const [selectedDonor, setSelectedDonor] = useState(null)
   const [mapCenter, setMapCenter] = useState(defaultCenter)
   const [hoveredBloodType, setHoveredBloodType] = useState(null)
-  const [mapError, setMapError] = useState(null)
-  const [isMapLoaded, setIsMapLoaded] = useState(false)
-
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
 
   const filteredDonors = useMemo(() => {
     return donors.filter((donor) => {
@@ -50,15 +35,8 @@ export default function LiveDonorMap() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const newCenter = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          }
+          const newCenter = [position.coords.latitude, position.coords.longitude]
           setMapCenter(newCenter)
-          if (map) {
-            map.panTo(newCenter)
-            map.setZoom(15)
-          }
         },
         (error) => {
           console.error('Error getting location:', error)
@@ -70,23 +48,9 @@ export default function LiveDonorMap() {
     }
   }
 
-  const handleMapLoad = useCallback((mapInstance) => {
-    setMap(mapInstance)
-    setIsMapLoaded(true)
-    setMapError(null)
-  }, [])
-
-  const handleMapError = useCallback(() => {
-    setMapError('Failed to load Google Maps. Please check your API key and console for details.')
-    setIsMapLoaded(false)
-  }, [])
-
   const handleFullView = () => {
     window.open('/live-donor-map', '_blank')
   }
-
-  // Check if API key is valid (not empty and not placeholder)
-  const isValidApiKey = apiKey && apiKey !== '' && apiKey !== 'your_google_maps_api_key_here'
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -131,90 +95,28 @@ export default function LiveDonorMap() {
                 </button>
               </div>
 
-              {!isValidApiKey ? (
-                <div className="bg-gray-100 rounded-lg h-96 flex items-center justify-center border-2 border-dashed border-gray-300">
-                  <div className="text-center p-6">
-                    <p className="text-4xl mb-4">🗺️</p>
-                    <p className="text-gray-600 mb-2 font-medium">Google Maps API Key Required</p>
-                    <p className="text-sm text-gray-500 mb-4">
-                      Add your API key to the .env file as VITE_GOOGLE_MAPS_API_KEY
-                    </p>
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-left max-w-md">
-                      <p className="text-xs text-yellow-800 font-semibold mb-2">Setup Instructions:</p>
-                      <ol className="text-xs text-yellow-700 space-y-1 list-decimal list-inside">
-                        <li>Get API key from Google Cloud Console</li>
-                        <li>Enable Maps JavaScript API</li>
-                        <li>Add key to .env file</li>
-                        <li>Restart dev server</li>
-                      </ol>
-                    </div>
-                  </div>
-                </div>
-              ) : mapError ? (
-                <div className="bg-red-50 border border-red-200 rounded-lg h-96 flex items-center justify-center">
-                  <div className="text-center p-6">
-                    <p className="text-red-600 text-2xl mb-4">⚠️</p>
-                    <p className="text-red-800 font-semibold mb-2">Map Loading Error</p>
-                    <p className="text-sm text-red-600 mb-4">{mapError}</p>
-                    <button
-                      onClick={() => {
-                        setMapError(null)
-                        window.location.reload()
-                      }}
-                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-                    >
-                      Retry
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <LoadScript
-                  googleMapsApiKey={apiKey}
-                  loadingElement={<div className="h-96 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
-                      <p className="text-gray-600">Loading Google Maps...</p>
-                    </div>
-                  </div>}
-                  onError={handleMapError}
-                >
-                  <div className="relative" style={{ height: '500px', width: '100%' }}>
-                    <GoogleMap
-                      mapContainerStyle={mapContainerStyle}
-                      center={mapCenter}
-                      zoom={12}
-                      onLoad={handleMapLoad}
-                      onError={handleMapError}
-                      options={{
-                        disableDefaultUI: false,
-                        zoomControl: true,
-                        streetViewControl: false,
-                        mapTypeControl: true,
-                        fullscreenControl: true,
+              <MapContainer
+                center={mapCenter}
+                zoom={12}
+                style={{ height: '500px', width: '100%' }}
+              >
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                />
+                {filteredDonors.slice(0, 10).map((donor, index) => {
+                  const lat = mapCenter[0] + (Math.random() - 0.5) * 0.1
+                  const lng = mapCenter[1] + (Math.random() - 0.5) * 0.1
+                  return (
+                    <Marker
+                      key={donor.id}
+                      position={[lat, lng]}
+                      eventHandlers={{
+                        click: () => setSelectedDonor({ ...donor, position: [lat, lng] }),
                       }}
                     >
-                      {isMapLoaded && filteredDonors.slice(0, 10).map((donor, index) => {
-                        const lat = mapCenter.lat + (Math.random() - 0.5) * 0.1
-                        const lng = mapCenter.lng + (Math.random() - 0.5) * 0.1
-                        return (
-                          <Marker
-                            key={donor.id}
-                            position={{ lat, lng }}
-                            icon={{
-                              url: donor.available
-                                ? 'http://maps.google.com/mapfiles/ms/icons/green-dot.png'
-                                : 'http://maps.google.com/mapfiles/ms/icons/gray-dot.png',
-                            }}
-                            onClick={() => setSelectedDonor({ ...donor, position: { lat, lng } })}
-                          />
-                        )
-                      })}
-
-                      {selectedDonor && (
-                        <InfoWindow
-                          position={selectedDonor.position}
-                          onCloseClick={() => setSelectedDonor(null)}
-                        >
+                      {selectedDonor && selectedDonor.id === donor.id && (
+                        <Popup>
                           <div className="p-2">
                             <h3 className="font-semibold">{selectedDonor.name}</h3>
                             <p className="text-sm">Blood Type: {selectedDonor.bloodType}</p>
@@ -232,12 +134,12 @@ export default function LiveDonorMap() {
                               Contact
                             </button>
                           </div>
-                        </InfoWindow>
+                        </Popup>
                       )}
-                    </GoogleMap>
-                  </div>
-                </LoadScript>
-              )}
+                    </Marker>
+                  )
+                })}
+              </MapContainer>
 
               {/* Blood Type Filters */}
               <div className="flex gap-2 mt-4 overflow-x-auto pb-2 scrollbar-hide">
