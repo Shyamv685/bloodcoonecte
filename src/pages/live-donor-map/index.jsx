@@ -58,6 +58,7 @@ export default function LiveDonorMap() {
         (position) => {
           const newCenter = [position.coords.latitude, position.coords.longitude]
           setMapCenter(newCenter)
+          setSelectedBloodType('All Types')
         },
         (error) => {
           console.error('Error getting location:', error)
@@ -89,14 +90,21 @@ export default function LiveDonorMap() {
       const latOffset = (seededRandom(seed) - 0.5) * maxDegreeOffset;
       const lngOffset = (seededRandom(seed + 1) - 0.5) * maxDegreeOffset;
       
-      const lat = donor.latitude || (mapCenter[0] + latOffset);
-      const lng = donor.longitude || (mapCenter[1] + lngOffset);
+      const isDummy = donor.id >= 1000 && donor.id < 2000;
+      const lat = (isDummy || !donor.latitude) ? (mapCenter[0] + latOffset) : donor.latitude;
+      const lng = (isDummy || !donor.longitude) ? (mapCenter[1] + lngOffset) : donor.longitude;
+      
       const distance = getDistance(mapCenter[0], mapCenter[1], lat, lng);
 
       if (selectedBloodType !== 'All Types' && donor.bloodType !== selectedBloodType) return;
       if (distance > parseFloat(searchRadius)) return;
 
-      items.push({ ...donor, lat, lng, distance, type: 'donor' });
+      let status = 'Unavailable'
+      if (donor.available) {
+        status = (seededRandom(seed + 2) > 0.3) ? 'Available' : 'Busy'
+      }
+
+      items.push({ ...donor, lat, lng, distance, type: 'donor', status });
     });
 
     // Calculate emergency locations
@@ -106,8 +114,10 @@ export default function LiveDonorMap() {
       const latOffset = (seededRandom(seed) - 0.5) * maxDegreeOffset;
       const lngOffset = (seededRandom(seed + 1) - 0.5) * maxDegreeOffset;
       
-      const lat = emergency.latitude || (mapCenter[0] + latOffset);
-      const lng = emergency.longitude || (mapCenter[1] + lngOffset);
+      const isDummy = !emergency.latitude || (emergency.id >= 1000 && emergency.id < 2000);
+      const lat = isDummy ? (mapCenter[0] + latOffset) : emergency.latitude;
+      const lng = isDummy ? (mapCenter[1] + lngOffset) : emergency.longitude;
+      
       const distance = getDistance(mapCenter[0], mapCenter[1], lat, lng);
 
       // We might want to filter emergency types too if a bloodType is required
@@ -128,10 +138,15 @@ export default function LiveDonorMap() {
       borderColor = 'border-red-800';
       symbol = '⚠';
       label = item.bloodType || 'EMG';
-    } else if (item.available) {
+    } else if (item.status === 'Available') {
       bgColor = 'bg-green-500';
       borderColor = 'border-green-700';
       symbol = '🩸';
+      label = item.bloodType;
+    } else if (item.status === 'Busy') {
+      bgColor = 'bg-yellow-500';
+      borderColor = 'border-yellow-700';
+      symbol = '⏳';
       label = item.bloodType;
     } else {
       bgColor = 'bg-gray-400';
@@ -239,37 +254,59 @@ export default function LiveDonorMap() {
                     >
                       {selectedItem && selectedItem.id === item.id && selectedItem.type === item.type && (
                         <Popup>
-                          <div className="p-2 min-w-[150px]">
-                            <h3 className="font-semibold text-lg">
-                              {item.type === 'emergency' ? 'Emergency Request' : (item.name || item.patientName || 'Unknown')}
+                          <div className="p-2 min-w-[160px]">
+                            <h3 className="font-semibold text-lg text-gray-900 border-b pb-1 mb-2">
+                              {item.type === 'emergency' 
+                                ? '🚨 Emergency Request' 
+                                : `Verified Donor #${String(item.id || '0000').slice(-4)}`}
                             </h3>
-                            <p className="text-sm font-medium text-red-600 my-1">
-                              Blood Type: {item.bloodType || 'Urgent'}
-                            </p>
-                            
-                            {item.type === 'emergency' ? (
-                              <>
-                                <p className="text-sm text-red-700 mb-1 font-bold">Status: Critical Emergency!</p>
-                                {item.message && <p className="text-xs text-gray-700 mb-1 italic">"{item.message}"</p>}
-                              </>
-                            ) : (
-                              <p className="text-sm text-gray-700 mb-1">
-                                Status: {item.available ? 'Available' : 'Donated recently'}
+                            <div className="space-y-1 my-2">
+                              <p className="text-sm">
+                                <span className="font-medium text-gray-700">Blood Group:</span>{' '}
+                                <span className="font-bold text-red-600">{item.bloodType || 'Urgent'}</span>
                               </p>
-                            )}
-                            
-                            <p className="text-sm text-gray-600 mb-2">
-                              Distance: <span className="font-semibold">{formatDistance(item.distance)}</span>
-                            </p>
+                              
+                              <p className="text-sm">
+                                <span className="font-medium text-gray-700">Status:</span>{' '}
+                                {item.type === 'emergency' ? (
+                                  <span className="font-bold text-red-700">Critical Emergency!</span>
+                                ) : (
+                                  <span className={`font-medium ${
+                                    item.status === 'Available' ? 'text-green-600' :
+                                    item.status === 'Busy' ? 'text-yellow-600' :
+                                    'text-gray-500'
+                                  }`}>
+                                    {item.status === 'Available' ? 'Available Donor' :
+                                     item.status === 'Busy' ? 'Busy Donor' :
+                                     'Unavailable'}
+                                  </span>
+                                )}
+                              </p>
+                              
+                              <p className="text-sm text-gray-600">
+                                <span className="font-medium text-gray-700">Distance:</span>{' '}
+                                {formatDistance(item.distance)}
+                              </p>
+
+                              {item.type !== 'emergency' && (
+                                <p className="text-[10px] text-gray-400 mt-2 italic leading-tight">
+                                  * Identity hidden for privacy.
+                                </p>
+                              )}
+                            </div>
 
                             <button
                               onClick={() => {
-                                alert(item.type === 'emergency' ? 'Responding to emergency...' : `Contacting ${item.name || 'donor'}...`)
+                                alert(item.type === 'emergency' 
+                                  ? 'Responding to emergency request...' 
+                                  : `Initiating secure Blood Request to Donor #${String(item.id || '0000').slice(-4)}...`)
                                 setSelectedItem(null)
                               }}
-                              className="w-full px-3 py-1.5 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors mt-1 font-medium"
+                              className={`w-full px-3 py-2 text-white rounded text-sm hover:bg-red-700 transition-colors mt-2 font-medium ${
+                                item.type === 'emergency' ? 'bg-red-600' : 'bg-red-500'
+                              }`}
                             >
-                              {item.type === 'emergency' ? 'Respond Now' : 'Contact'}
+                              {item.type === 'emergency' ? 'Respond Now' : 'Request Blood'}
                             </button>
                           </div>
                         </Popup>

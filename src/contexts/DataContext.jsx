@@ -24,8 +24,29 @@ export const DataProvider = ({ children }) => {
     const savedHospitals = localStorage.getItem('hospitals')
     const savedEmergencies = localStorage.getItem('emergencies')
 
-    if (savedRequests) setBloodRequests(JSON.parse(savedRequests))
-    if (savedDonors) setDonors(JSON.parse(savedDonors))
+    if (savedRequests && JSON.parse(savedRequests).length > 0) {
+      setBloodRequests(JSON.parse(savedRequests))
+    }
+    
+    if (savedDonors && JSON.parse(savedDonors).length > 0) {
+      setDonors(JSON.parse(savedDonors))
+    } else {
+      // Seed dummy realistic donors instantly for the Map
+      const bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
+      const defaultLat = 40.7128
+      const defaultLng = -74.0060
+      const dummyDonors = Array.from({ length: 25 }, (_, i) => ({
+        id: 1000 + i,
+        name: `Donor #${1000 + i}`,
+        bloodType: bloodTypes[Math.floor(Math.random() * bloodTypes.length)],
+        available: Math.random() > 0.3,
+        latitude: defaultLat + (Math.random() - 0.5) * 0.15,
+        longitude: defaultLng + (Math.random() - 0.5) * 0.15,
+        registeredAt: new Date().toISOString(),
+      }))
+      setDonors(dummyDonors)
+    }
+
     if (savedHospitals) setHospitals(JSON.parse(savedHospitals))
     if (savedEmergencies) setEmergencies(JSON.parse(savedEmergencies))
   }, [])
